@@ -1,6 +1,7 @@
 # yazi-tmsu
 
 A [Yazi](https://github.com/sxyazi/yazi) plugin for [TMSU](https://tmsu.org/) 
+![screenshot](img/screenshot2.png)
 
 ---
 
