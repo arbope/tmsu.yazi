@@ -1,5 +1,4 @@
--- main.lua - Yazi plugin for TMSU tagging
-
+--STABLE
 local M = {}
 
 -- Get selected files
@@ -77,8 +76,13 @@ function M:add()
 	end
 
 	for _, file in ipairs(files) do
-		-- FIXED: use .args() for tables, or chain .arg()
-		local status = Command("tmsu"):arg("tag"):arg(file):args(tags):spawn():wait()
+		local cmd = Command("tmsu"):arg("tag"):arg(file)
+
+		for _, tag in ipairs(tags) do
+			cmd:arg(tag)
+		end
+
+		local status = cmd:spawn():wait()
 
 		if not status or not status.success then
 			return ya.notify({ title = "TMSU", content = "Failed tagging: " .. file, timeout = 5, level = "error" })
@@ -112,7 +116,13 @@ function M:remove()
 	end
 
 	for _, file in ipairs(files) do
-		local status = Command("tmsu"):arg("untag"):arg(file):args(tags):spawn():wait()
+		local cmd = Command("tmsu"):arg("untag"):arg(file)
+
+		for _, tag in ipairs(tags) do
+			cmd:arg(tag)
+		end
+
+		local status = cmd:spawn():wait()
 
 		if not status or not status.success then
 			return ya.notify({ title = "TMSU", content = "Failed removing tags", timeout = 5, level = "error" })
@@ -132,7 +142,7 @@ function M:filter()
 
 	-- If cancelled, clear filter
 	if event ~= 1 then
-		return ya.emit("filter", { query = "" })
+		return
 	end
 
 	local cmd = Command("tmsu"):arg("files")
@@ -272,279 +282,3 @@ function M:common()
 end
 
 return M
-
--- PLUGIN FOR UNSTABLE VERSION 26.1.22
--- -- main.lua - Yazi plugin for TMSU tagging
---
--- local M = {}
---
--- -- Get selected files
--- local get_files = ya.sync(function()
--- 	if not cx or not cx.active then
--- 		ya.notify({
--- 			title = "TMSU",
--- 			content = "No context available (cx is nil)",
--- 			timeout = 3,
--- 			level = "error",
--- 		})
--- 		return {}
--- 	end
---
--- 	local files = {}
---
--- 	if cx.active.selected and #cx.active.selected > 0 then
--- 		for _, url in pairs(cx.active.selected) do
--- 			files[#files + 1] = tostring(url)
--- 		end
--- 	elseif cx.active.current and cx.active.current.hovered then
--- 		files[1] = tostring(cx.active.current.hovered.url)
--- 	end
---
--- 	return files
--- end)
---
--- -- Get hovered file
--- local get_hovered_file = ya.sync(function()
--- 	if cx and cx.active and cx.active.current and cx.active.current.hovered then
--- 		return tostring(cx.active.current.hovered.url)
--- 	end
--- 	return nil
--- end)
---
--- -- Entry point
--- function M:entry(job)
--- 	local action = job.args and job.args[1]
---
--- 	if action == "add" then
--- 		return self:add()
--- 	elseif action == "filter" then
--- 		return self:filter()
--- 	elseif action == "remove" then
--- 		return self:remove()
--- 	elseif action == "list" then
--- 		return self:list()
--- 	else
--- 		ya.notify({
--- 			title = "TMSU",
--- 			content = "Unknown action: " .. tostring(action),
--- 			timeout = 3,
--- 			level = "error",
--- 		})
--- 	end
--- end
---
--- -- Add tags
--- function M:add()
--- 	local files = get_files()
---
--- 	if not files or #files == 0 then
--- 		return ya.notify({
--- 			title = "TMSU",
--- 			content = "No files selected",
--- 			timeout = 3,
--- 			level = "error",
--- 		})
--- 	end
---
--- 	local result = ya.input({
--- 		title = "Add tags",
--- 		placeholder = "tag1 tag2 tag3",
--- 		pos = { "top-center", y = 3, w = 40 },
--- 	})
---
--- 	if not result or result == "" then
--- 		return
--- 	end
---
--- 	local tags = {}
--- 	for tag in result:gmatch("%S+") do
--- 		tags[#tags + 1] = tag
--- 	end
---
--- 	if #tags == 0 then
--- 		return ya.notify({
--- 			title = "TMSU",
--- 			content = "No tags provided",
--- 			timeout = 3,
--- 			level = "warn",
--- 		})
--- 	end
---
--- 	for _, file in ipairs(files) do
--- 		local args = { "tag", file }
---
--- 		for _, tag in ipairs(tags) do
--- 			args[#args + 1] = tag
--- 		end
---
--- 		local status = Command("tmsu"):arg(args):spawn():wait()
---
--- 		if not status or not status.success then
--- 			return ya.notify({
--- 				title = "TMSU",
--- 				content = "Failed tagging file",
--- 				timeout = 5,
--- 				level = "error",
--- 			})
--- 		end
--- 	end
---
--- 	ya.notify({
--- 		title = "TMSU",
--- 		content = "Tags added",
--- 		timeout = 3,
--- 	})
--- end
---
--- -- Remove tags
--- function M:remove()
--- 	local files = get_files()
---
--- 	if not files or #files == 0 then
--- 		return ya.notify({
--- 			title = "TMSU",
--- 			content = "No files selected",
--- 			timeout = 3,
--- 			level = "error",
--- 		})
--- 	end
---
--- 	local result = ya.input({
--- 		title = "Remove tags",
--- 		placeholder = "tag1 tag2",
--- 		pos = { "top-center", y = 3, w = 40 },
--- 	})
---
--- 	if not result or result == "" then
--- 		return
--- 	end
---
--- 	local tags = {}
--- 	for tag in result:gmatch("%S+") do
--- 		tags[#tags + 1] = tag
--- 	end
---
--- 	for _, file in ipairs(files) do
--- 		local args = { "untag", file }
---
--- 		for _, tag in ipairs(tags) do
--- 			args[#args + 1] = tag
--- 		end
---
--- 		local status = Command("tmsu"):arg(args):spawn():wait()
---
--- 		if not status or not status.success then
--- 			return ya.notify({
--- 				title = "TMSU",
--- 				content = "Failed removing tags",
--- 				timeout = 5,
--- 				level = "error",
--- 			})
--- 		end
--- 	end
---
--- 	ya.notify({
--- 		title = "TMSU",
--- 		content = "Tags removed",
--- 		timeout = 3,
--- 	})
--- end
---
--- -- Filter files by tags
--- function M:filter()
--- 	local result, event = ya.input({
--- 		title = "TMSU Tag Filter",
--- 		placeholder = "Enter tags (e.g. art alien)",
--- 		pos = { "top-center", y = 3, w = 50 },
--- 	})
---
--- 	if event ~= 1 or not result or result == "" then
--- 		return ya.emit("filter", { query = "" })
--- 	end
---
--- 	local cmd = Command("tmsu"):arg("files")
--- 	for tag in result:gmatch("%S+") do
--- 		cmd:arg(tag)
--- 	end
---
--- 	local output = cmd:stdout(Command.PIPED):spawn():wait_with_output()
---
--- 	if not output or not output.status.success or output.stdout == "" then
--- 		return ya.notify({ title = "TMSU", content = "No files found", timeout = 3, level = "warn" })
--- 	end
---
--- 	local filenames = {}
--- 	for line in output.stdout:gmatch("[^\r\n]+") do
--- 		local name = line:gsub("^%./", ""):match("([^/]+)$") or line
--- 		table.insert(filenames, name)
--- 	end
---
--- 	if #filenames > 0 then
--- 		local patterns = {}
--- 		for _, f in ipairs(filenames) do
--- 			table.insert(patterns, "^" .. f .. "$")
--- 		end
--- 		local pattern = table.concat(patterns, "|")
---
--- 		-- ya.emit("filter", { query = "" })
--- 		-- ya.emit("escape", { filter = true })
---
--- 		ya.emit("filter_do", { pattern, smart = false })
---
--- 		ya.notify({
--- 			title = "TMSU Filter",
--- 			content = "Showing " .. #filenames .. " matching files",
--- 			timeout = 2,
--- 		})
--- 	end
--- end
---
--- -- List tags
--- function M:list()
--- 	local file = get_hovered_file()
---
--- 	if not file then
--- 		return ya.notify({
--- 			title = "TMSU",
--- 			content = "No file selected",
--- 			timeout = 3,
--- 			level = "error",
--- 		})
--- 	end
---
--- 	local child = Command("tmsu"):arg({ "tags", file }):stdout(Command.PIPED):spawn()
---
--- 	if not child then
--- 		return ya.notify({
--- 			title = "TMSU",
--- 			content = "Failed running tmsu",
--- 			timeout = 5,
--- 			level = "error",
--- 		})
--- 	end
---
--- 	local output = child:wait_with_output()
---
--- 	if not output or not output.status.success then
--- 		return ya.notify({
--- 			title = "TMSU",
--- 			content = "Failed listing tags",
--- 			timeout = 5,
--- 			level = "error",
--- 		})
--- 	end
---
--- 	local tags = output.stdout:gsub("\n$", "")
---
--- 	if tags == "" then
--- 		tags = "No tags"
--- 	end
---
--- 	ya.notify({
--- 		title = "TMSU Tags",
--- 		content = tags,
--- 		timeout = 5,
--- 	})
--- end
---
--- return M
